@@ -1,72 +1,124 @@
-// Size the grid to the window on load
+var $$ = function( prop, context ) {
 
-document.ready = function() {
-	var loadwidth = $(window).height();
-	loadwidth *= 0.50;
-	$('table').css({'width':loadwidth+'px'});
-	$('table').css({'height':loadwidth+'px'});
-}
+      if ( !( this instanceof $$ ) )
+      {
+        return new $$( prop, context );
+      }
 
-// Resize grid if window is resized
+      var elements = ( context !== undefined ) ? context.querySelectorAll( prop ) : document.querySelectorAll( prop );
 
-window.onresize = function() {
-	var dynwidth = $(window).height();
-	dynwidth *= 0.50;
-	$('table').css({'width':dynwidth+'px'});
-	$('table').css({'height':dynwidth+'px'});
-}
+      for ( var i = 0; i < elements.length; i++ )
+      {
+        this[i] = elements[i];
+      }
 
-// Show and hide instructions when prompted
+      this.length = elements.length;
 
-$('#info').click(function() {
-	$('#instruct').css({'display':'block'});
-});
+      this.forEach = function( func ) {
+        return Array.prototype.forEach.call( this, function( elem, index ) {
+          return func.call( elem, elem, index );
+        });
+      };
 
-$('#close').click(function() {
-	$('#instruct').css({'display':'none'});
-});
+    },
 
-$('#resultclose').click(function() {
-	$('#resultswindow').css({'display':'none'});
-});
+    Utils = function() {
 
-// Define letters audio
+      var squares = {
+        1: { selector: '#uno', letter: 'b' },
+        2: { selector: '#dos', letter: 'f' },
+        3: { selector: '#tres', letter: 'k' },
+        4: { selector: '#cuatro', letter: 'n' },
+        5: { selector: '#seis', letter: 'p' },
+        6: { selector: '#siete', letter: 'q' },
+        7: { selector: '#ocho', letter: 'r' },
+        8: { selector: '#nueve', letter: 't' },
+      };
 
-var letb = new Howl({
-	urls: ['audio/b.mp3', 'audio/b.ogg', 'audio/b.wav']
-});
+      this.n = 2;
 
-var letf = new Howl({
-	urls: ['audio/f.mp3', 'audio/f.ogg', 'audio/f.wav']
-});
+      this.running = false;
 
-var letk = new Howl({
-	urls: ['audio/k.mp3', 'audio/k.ogg', 'audio/k.wav']
-});
+      this.userScore = [0, 0, 0, 0]; // Visual correct, audio correct, visual mistakes, audio mistakes
 
-var letn = new Howl({
-	urls: ['audio/n.mp3', 'audio/n.ogg', 'audio/n.wav']
-});
+      this.boardSize = function() {
+        var body = $$( 'body' )[0],
+            size = ( window.innerHeight || document.documentElement.clientHeight || body.clientHeight ) * 0.50,
+            board = $$( '#board' )[0];
 
-var letp = new Howl({
-	urls: ['audio/p.mp3', 'audio/p.ogg', 'audio/p.wav']
-});
+        board.style.width = size + 'px';
+        board.style.height = size + 'px';
+      };
 
-var letq = new Howl({
-	urls: ['audio/q.mp3', 'audio/q.ogg', 'audio/q.wav']
-});
+      this.sqrMaker = function( position ) {
+        var selector = squares[ position ].selector,
+            square = $$( selector )[0];
 
-var letr = new Howl({
-	urls: ['audio/r.mp3', 'audio/r.ogg', 'audio/r.wav']
-});
+        square.classList.toggle('on');
 
-var lett = new Howl({
-	urls: ['audio/t.mp3', 'audio/t.ogg', 'audio/t.wav']
-});
+        setTimeout( function() {
+          square.classList.toggle( 'on' );
+        }, 500 );
+      };
 
-// VALUE OF N
+      this.letters = function( position ) {
+        var letter = squares[ position ].letter,
+            speech, file, howl;
 
-var n = 2;
+        if ( 'speechSynthesis' in window ) {
+          speech = new SpeechSynthesisUtterance( letter );
+
+          speechSynthesis.speak( speech );
+        } else {
+          file = 'audio/' + letter;
+
+          howl = new Howl({
+            urls: [ file + '.mp3', file + '.ogg', file + '.wav' ]
+          });
+
+          howl.play();
+        }
+      };
+
+    },
+
+    // get rid of these once everything is encapsulated in Utils
+    utils = new Utils(),
+    letters = utils.letters,
+    sqrMaker = utils.sqrMaker,
+    n = utils.n,
+    userScore = utils.userScore;
+    blockRunning = utils.running;
+
+
+(function( Utils, $ ) {
+
+  var info = $( '#info' )[0],
+      close = $( '#close' )[0],
+      instruct = $( '#instruct' )[0],
+      resultClose = $( '#resultclose' )[0],
+      resultsWindow = $( '#resultswindow' )[0],
+      utils = new Utils();
+
+  // set the board size on load and resize
+  document.addEventListener( 'DOMContentLoaded', utils.boardSize );
+  window.onresize = utils.boardSize;
+
+  // show and hide things
+  info.addEventListener( 'click', function() {
+    console.log( 'clicked info button' );
+    instruct.style.display = 'block';
+  });
+
+  close.addEventListener( 'click', function() {
+    instruct.style.display = 'none';
+  });
+
+  resultClose.addEventListener( 'click', function() {
+    resultsWindow.style.display = 'none';
+  });
+
+})( Utils, $$ );
 
 // PREPARE BLOCK FUNCTION
 
@@ -239,80 +291,6 @@ function evaluateBlock(block) {
 	return [vTargCount, aTargCount];
 }
 
-// Function to light up specified square
-
-var sqrMaker = function(randSqr) {
-	switch(randSqr) {
-		case 1:
-			$('#uno').toggleClass('on');
-			setTimeout(function(){$('#uno').toggleClass('on')}, 500);
-			break;
-		case 2:
-			$('#dos').toggleClass('on');
-			setTimeout(function(){$('#dos').toggleClass('on')}, 500);
-			break;
-		case 3:
-			$('#tres').toggleClass('on');
-			setTimeout(function(){$('#tres').toggleClass('on')}, 500);
-			break;
-		case 4:
-			$('#cuatro').toggleClass('on');
-			setTimeout(function(){$('#cuatro').toggleClass('on')}, 500);
-			break;
-		case 5:
-			$('#seis').toggleClass('on');
-			setTimeout(function(){$('#seis').toggleClass('on')}, 500);
-			break;
-		case 6:
-			$('#siete').toggleClass('on');
-			setTimeout(function(){$('#siete').toggleClass('on')}, 500);
-			break;
-		case 7:
-			$('#ocho').toggleClass('on');
-			setTimeout(function(){$('#ocho').toggleClass('on')}, 500);
-			break;
-		case 8:
-			$('#nueve').toggleClass('on');
-			setTimeout(function(){$('#nueve').toggleClass('on')}, 500);
-			break;
-	}
-};
-
-// Function to trigger specified consonant
-
-var letters = function(randLet) {
-	switch(randLet) {
-		case 1:
-			letb.play();
-			break;
-		case 2:
-			letf.play();
-			break;
-		case 3:
-			letk.play();
-			break;
-		case 4:
-			letn.play();
-			break;
-		case 5:
-			letp.play();
-			break;
-		case 6:
-			letq.play();
-			break;
-		case 7:
-			letr.play();
-			break;
-		case 8:
-			lett.play();
-			break;
-	}
-};
-
-// Global variable for user score
-
-var userScore = [0, 0, 0, 0]; // Visual correct, audio correct, visual mistakes, audio mistakes
-
 // MAIN GAME FUNCTION
 
 function playBlock() {
@@ -369,7 +347,7 @@ function playBlock() {
 			sqrMaker(currentBlock[blockCounter][0]);
 			letters(currentBlock[blockCounter][1]);
 			}
-			console.log('this block: ' + currentBlock[blockCounter])
+			console.log('this block: ' + currentBlock[blockCounter]);
 			console.log('keypresses: ' + hitsThisValue);
 			console.log('current score: ' + userScore);
 			setTimeout(playValue, 3000);
@@ -397,10 +375,6 @@ function playBlock() {
 		}
 	}
 }
-
-// When the button is clicked, run a block
-
-var blockRunning = false;
 
 $('#begin').click(function() {
 	if(blockRunning === false) {
